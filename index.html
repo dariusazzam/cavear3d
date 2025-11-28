@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>CAVEAR 3D</title>
+        <script src="aframe.min.js"></script>
+        <script src="mindar-image.prod.js"></script>
+        <script src="mindar-image-aframe.prod.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/aframe-gesture-component@latest/dist/aframe-gesture-component.min.js"></script>
+        <link rel="icon" type="image/x-icon" href="favicon.ico">
+        
+
+        <style>
+            body, html { margin: 0; padding: 0; overflow: hidden; }
+            #ar-view { width: 100vw; height: 100vh; }
+            #loading-screen.hidden {animation: fadeOut 0.6s ease-out forwards;}
+            
+            @keyframes fadeOut {0% { opacity: 1; }100% { opacity: 0; visibility: hidden; }}
+    
+            @keyframes popIn {
+            0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
+            100% { transform: translateX(-50%) scale(1); opacity: 1; }
+            }
+    
+            #title-text, #info-text {
+            animation: popIn 0.6s ease-out;
+            }
+    
+            @keyframes logoFade {
+            0% { transform: scale(0.6); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+            }
+    
+            #logo-fixed { animation: logoFade 0.8s ease-out; }
+            
+            .overlay-box {
+                position: absolute;
+                z-index: 10;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(255, 136, 198, 0.85);
+                padding: 6px 12px;
+                border-radius: 10px;
+                font-family: sans-serif;
+                font-size: 14px;
+                text-align: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+    
+            #title-text { top: 10px; font-weight: bold; font-size: 16px; }
+            #info-text { top: 70px; }
+    
+            @keyframes spin { 
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+    
+            #ui-buttons button {
+                padding: 12px 20px;
+                font-size: 14px;
+                border-radius: 12px;
+                border: 1.5px solid rgba(255, 255, 255, 0.5);
+                background: rgba(255, 182, 218, 0.35); /* pink glass */
+                color: rgb(255, 255, 255);
+                backdrop-filter: blur(8px);
+                box-shadow: 0 4px 10px rgba(255, 100, 180, 0.25);
+                transition: all 0.28s ease;
+            }
+    
+            #ui-buttons button:hover {
+                transform: scale(1.1);
+                background: rgba(255, 182, 218, 0.55);
+                box-shadow: 0 6px 16px rgba(255, 100, 180, 0.35);
+            }
+    
+            #ui-buttons button:active {
+                transform: scale(0.92);
+                background: rgba(255, 182, 218, 0.65);
+            }
+
+            #logo-fixed a {
+                transition: all 0.25s ease;
+                border-radius: 10px;
+            }
+
+            #logo-fixed a:hover {
+                transform: scale(1.08);
+                background: rgba(255, 182, 218, 0.45);
+                box-shadow: 0 4px 12px rgba(255, 120, 190, 0.35);
+                padding: 4px;
+                border-radius: 10px;
+            }
+
+            #logo-fixed a:active {
+                transform: scale(0.92);
+                background: rgba(255, 182, 218, 0.55);
+                box-shadow: 0 2px 6px rgba(255, 120, 190, 0.5);
+                padding: 4px;
+            }
+
+            #ar-view, a-scene {
+            pointer-events: none;
+            }
+            .link-btn {
+                background: rgba(255, 255, 255, 0.75);
+                border-radius: 12px;
+                padding: 8px 6px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-decoration: none;
+                color: rgb(255, 75, 150);
+                font-size: 12px;
+                font-weight: bold;
+                box-shadow: 0 2px 6px rgba(255,100,180,0.25);
+                transition: 0.25s;
+            }
+
+            .link-btn img {
+                width: 24px;
+                margin-bottom: 4px;
+            }
+
+            .link-btn:hover {
+                transform: scale(1.08);
+                background: rgba(255, 255, 255, 0.9);
+                box-shadow: 0 4px 12px rgba(255,80,160,0.35);
+            }
+
+            .link-btn:active {
+                transform: scale(0.93);
+            }
+
+            .link-btn {
+                background: rgba(255, 255, 255, 0.75);
+                border-radius: 12px;
+                padding: 8px 6px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-decoration: none;
+                color: rgb(255, 75, 150);
+                font-size: 12px;
+                font-weight: bold;
+                box-shadow: 0 2px 6px rgba(255,100,180,0.25);
+                transition: 0.25s;
+            }
+
+            .link-btn img {
+                width: 24px;
+                margin-bottom: 4px;
+            }
+
+            .link-btn:hover {
+                transform: scale(1.08);
+                background: rgba(255, 255, 255, 0.9);
+                box-shadow: 0 4px 12px rgba(255,80,160,0.35);
+            }
+
+            .link-btn:active {
+                transform: scale(0.93);
+            }
+
+        </style>
+    </head>
+    
+    <body>
+        <div id="logo-fixed" style="
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 3000;
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.65);
+            border-radius: 10px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;">
+            <a href="https://captainvenus.carrd.co/" target="_blank" style="display: inline-block;">
+                <img src="logo_cv_lengkap.png" style="
+                width: 12vw;
+                max-width: 85px;
+                min-width: 45px;">
+            </a>          
+        </div>
+        
+        <audio id="bgm" src="bgmar.mp3" loop></audio>
+
+        <!-- INFO BUTTON -->
+        <div id="info-button" style="
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        z-index: 3000;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(4px);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        ">
+            <img src="logo_informasi.png" style="width:40px;">
+        </div>
+
+        <!-- TOMBOL PROFILE -->
+        <div id="profile-button" style="
+        position: absolute;
+        top: 15px;
+        right: 70px;
+        z-index: 3000;
+        background: rgba(255,255,255,0.65);
+        backdrop-filter: blur(4px);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        ">
+        <img src="logo_profile.png" style="width:40px;">
+        </div>
+
+
+        <!-- POPUP PETUNJUK -->
+        <div id="popup-guide" style="
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(3px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 5000;
+        ">
+
+        <div style="
+        background: rgba(179, 29, 104, 0.45);
+        border: 2px solid rgba(255,255,255,0.8);
+        padding: 22px 26px;
+        width: 85%;
+        max-width: 360px;
+        border-radius: 18px;
+        color: white;
+        font-family: sans-serif;
+        text-align: left;
+        box-shadow: 0 4px 18px rgba(255, 130, 190, 0.4);
+        position: relative;
+        ">
+
+        <h3 style="margin-top: 0; font-size: 20px;">📘 Cara Menggunakan CAVEAR 3D 2.0</h3>
+
+        <p style="font-size: 15px; line-height: 1.5;">
+            1. Siapkan marker CAVEAR (cek di captainvenus.carrd.co jika belum memliki)!
+            2. Izinkan akses kamera perangkat pada web ini.<br>
+            2. Arahkan kamera ke marker untuk memindai.<br>
+            3. Gunakan tombol Rotate untuk memutar model, Play dan Pause untuk memutar dan menghentikan audio.<br>
+            4. Ganti marker untuk melihat model lainnya.<br><br>
+            Selamat menikmati pengalaman CAVEAR! ✨
+        </p>
+
+        <button id="btn-close-popup" style="
+            margin-top: 10px;
+            padding: 10px 16px;
+            border: none;
+            text-align: center;
+            font-size: 14px;
+            border-radius: 10px;
+            background: white;
+            color: rgb(255, 120, 180);
+            font-weight: bold;
+            box-shadow: 0 3px 8px rgba(255,100,180,0.35);
+            transition: 0.2s;
+        ">
+            Mengerti 💗
+        </button>
+
+        </div>
+        </div>
+
+        <div id="popup-info" style="
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(3px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 5000;
+        ">
+        <div style="
+            background: rgba(179, 29, 104, 0.45);
+            border: 2px solid rgba(255,255,255,0.8);
+            padding: 22px 26px;
+            width: 85%;
+            max-width: 360px;
+            border-radius: 18px;
+            color: white;
+            font-family: sans-serif;
+            text-align: justify;
+            box-shadow: 0 4px 18px rgba(255, 130, 190, 0.4);
+            position: relative;
+            ">
+    
+            <h3 style="margin-top:0; font-size: 20px;">Tentang CAVEAR 3D</h3>
+    
+            <p style="font-size: 15px; line-height: 1.5;">
+                CAVEAR 3D adalah pengalaman Augmented Reality dengan pembaruan 2.0, yaitu 3D Model dan Audio, CAVEAR 3D dibuat sebagai kado perayaan ulang tahun <b>Venus</b> yang ke 20 tahun!
+                Scan marker dan nikmati model karakter, animasi, serta audio yang tersedia.
+                <br><br>
+                Versi: <b>2.0</b><br>
+               Made by Captain (Darius Fikram Azzam)
+            </p>
+    
+            <button id="btn-close-info" style="
+                margin-top: 10px;
+                padding: 10px 16px;
+                border: none;
+                text-align: center;
+                font-size: 14px;
+                border-radius: 10px;
+                background: white;
+                color: rgb(255, 120, 180);
+                font-weight: bold;
+                box-shadow: 0 3px 8px rgba(255,100,180,0.35);
+                transition: 0.2s;
+                cursor: pointer;
+            ">
+                Tutup ✨
+            </button>
+    
+        </div>
+        </div>
+
+        <!-- POPUP LINKS -->
+        <div id="popup-links" style="
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(3px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 5000;
+        ">
+
+            <div style="
+                background: rgba(179, 29, 104, 0.45);
+                border: 2px solid rgba(255,255,255,0.8);
+                padding: 22px 26px;
+                width: 88%;
+                max-width: 380px;
+                border-radius: 18px;
+                color: white;
+                font-family: sans-serif;
+                text-align: center;
+                box-shadow: 0 4px 18px rgba(255, 130, 190, 0.4);
+            ">
+
+                <h3 style="margin-top: 0; font-size: 20px;">🌐 Discover CV!</h3>
+
+                <!-- GRID TOMBOL -->
+                <div style="
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 10px;
+                    margin-top: 15px;
+                ">
+
+                    <!-- Contoh tombol -->
+                    <a href="https://instagram.com/darius.azzam" target="_blank" class="link-btn">
+                        <img src="logo_instagram.png">
+                        <span>@darius.azzam</span>
+                    </a>
+
+                    <a href="https://mail.google.com/mail/u/0/?view=cm&tf=1&fs=1&to=captainvenus52@gmail.com" target="_blank" class="link-btn">
+                        <img src="logo_email.png">
+                        <span>CV Email</span>
+                    </a>
+
+                    <a href="https://instagram.com/aghis.aa" target="_blank" class="link-btn">
+                        <img src="logo_instagram.png">
+                        <span>@aghis.aa</span>
+                    </a>
+
+                    <a href="https://open.spotify.com/playlist/1dPym7OhaDRmpTmE7Qkbkx?si=6ca74c2690c54cd8" target="_blank" class="link-btn">
+                        <img src="logo_spotify.png">
+                        <span>CV Top Songs</span>
+                    </a>
+
+                    <a href="https://open.spotify.com/playlist/1kG3jtTfg8gpBrfK9qAOmr?si=f2c56403795d432b" target="_blank" class="link-btn">
+                        <img src="logo_spotify.png">
+                        <span>CV Playlist</span>
+                    </a>
+
+                    <a href="https://open.spotify.com/show/6uK0D1T76zEfaLHqql474y?si=29212980229847fe" target="_blank" class="link-btn">
+                        <img src="logo_spotify.png">
+                        <span>CV Podcast</span>
+                    </a>
+
+
+                    <!-- baris ke-4 hanya 1 item -->
+                    <a href="https://captainvenus.carrd.co/" class="link-btn" style="grid-column: span 3;">
+                        <img src="logo_cv.png">
+                        <span>CV Website</span>
+                    </a>
+
+                </div>
+
+                <button id="btn-close-links" style="
+                    margin-top: 16px;
+                    padding: 10px 20px;
+                    border: none;
+                    text-align: center;
+                    font-size: 14px;
+                    border-radius: 10px;
+                    background: white;
+                    color: rgb(255, 120, 180);
+                    font-weight: bold;
+                    box-shadow: 0 3px 8px rgba(255,100,180,0.35);
+                    cursor: pointer;
+                ">
+                    Tutup
+                </button>
+
+            </div>
+        </div>
+
+        <!-- INTRO VIDEO -->
+        <div id="intro-container" style="
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgb(255, 255, 255);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        ">
+        <video id="intro-video" autoplay muted playsinline style="
+        width: 80vw;
+        max-width: 400px;
+        border: 5px solid black;
+        border-radius: 12px;
+        ">
+        <source src="logo_cv_animated.webm" type="video/webm">
+        </video>
+        </div>
+
+
+        <!-- LOADING -->
+        <div id="loading-screen" style="
+            position: fixed;
+            z-index: 100;
+            width: 100vw;
+            height: 100vh;
+            background: rgb(251, 143, 206);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: sans-serif;
+            font-size: 16px;">
+    
+            <div style="margin-bottom: 12px; color: white;">🔄 Memuat CAVEAR...</div>
+          
+            <div class="spinner" style="
+                width: 40px;
+                height: 40px;
+                border: 5px solid rgb(245, 38, 159);
+                border-top: 5px solid rgb(255, 255, 255);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;">
+            </div>
+        </div>
+          
+        <!-- TEKS DI ATAS -->
+        <div id="title-text" class="overlay-box" style="color: white;">CAVEAR 3D</div>
+        <div id="info-text" class="overlay-box" style="color: white;">📸 Izinkan kamera dan arahkan ke marker ♡</div>
+          
+        <!-- UI BUTTONS -->
+        <div id="ui-buttons" style="
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 14px;
+            z-index: 3000;">
+              
+            <button id="btn-rotate">🔄 Rotate</button>
+            <button id="btn-play">▶️ Play</button>
+            <button id="btn-pause">⏸️ Pause</button>
+            <button id="btn-bgm" style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                <img id="bgm-icon" src="logomutebgm.png" style="width:22px;">
+                <span id="bgm-text">Mute BGM</span>
+            </button>
+
+        </div>
+
+      
+        <!-- AR SCENE -->
+        <div id="ar-view">
+          <a-scene 
+            gesture-detector
+            mindar-image="imageTargetSrc: targets.mind;"
+            embedded
+            color-space="sRGB"
+            renderer="colorManagement: true, physicallyCorrectLights"
+            vr-mode-ui="enabled: false"
+            device-orientation-permission-ui="enabled: true">
+      
+            <!-- LIGHT -->
+            <a-entity light="type: ambient; intensity: 0.7"></a-entity>
+            <a-entity light="type: directional; intensity: 0.6" position="1 2 0"></a-entity>
+      
+            <!-- CAMERA -->
+            <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      
+      
+            <!-- MARKER 0 — DENGAN ANIMASI SPIN -->
+            <a-entity mindar-image-target="targetIndex: 0">
+              <a-entity id="model-wrapper0" rotation="90 0 0" position="0 -0.1 0.1" gesture-controls="minScale: 0.3; maxScale: 3; rotationEnabled: false">
+                    <a-gltf-model id="model0" src="./bestcouple_shaded.glb" scale="0.6 0.6 0.6">
+                    </a-gltf-model>
+                </a-entity>
+              </a-entity>
+      
+      
+            <!-- MARKER 1 -->
+            <a-entity mindar-image-target="targetIndex: 1">
+              <a-entity id="model-wrapper1" rotation="90 0 0" position="0 -0.1 0.1">
+                <a-gltf-model id="model1" src="./firsteverfotbar_shaded.glb" scale="0.6 0.6 0.6">
+                </a-gltf-model>
+              </a-entity>
+            </a-entity>
+      
+      
+            <!-- MARKER 2 -->
+            <a-entity mindar-image-target="targetIndex: 2">
+                <a-entity id="model-wrapper2" rotation="90 0 0" position="0 -0.1 0.1">
+                      <a-gltf-model id="model2" src="./gratefultwelve_shaded.glb" scale="0.6 0.6 0.6">
+                      </a-gltf-model>
+                  </a-entity>
+                </a-entity>
+              </a-entity>
+      
+      
+            <!-- MARKER 3 -->
+            <a-entity mindar-image-target="targetIndex: 3">
+                <a-entity id="model-wrapper3" rotation="90 0 0" position="0 -0.1 0.1">
+                      <a-gltf-model id="model3" src="./smileyosis_shaded.glb" scale="0.6 0.6 0.6">
+                      </a-gltf-model>
+                  </a-entity>
+                </a-entity>
+              </a-entity>
+      
+      
+            <!-- MARKER 4 -->
+            <a-entity mindar-image-target="targetIndex: 4">
+              <a-entity id="model-wrapper4" rotation="90 0 0" position="0 -0.1 0.1">
+                <a-gltf-model id="model4" src="./venusaward_shaded.glb" scale="0.6 0.6 0.6">
+                </a-gltf-model>
+              </a-entity>
+            </a-entity>
+      
+          </a-scene>
+        </div>
+
+        <audio id="audio0" src="bestcouple.mp3"></audio>
+        <audio id="audio1" src="firstfotbar.mp3"></audio>
+        <audio id="audio2" src="gratefultwelve.mp3"></audio>
+        <audio id="audio3" src="smileyosis.mp3"></audio>
+        <audio id="audio4" src="venusaward.mp3"></audio>
+      
+        <script>
+            /* =============================
+               LOADING HANDLER
+            ============================= */
+            const scene = document.querySelector("a-scene");
+            scene.addEventListener("loaded", () => {
+                const loading = document.getElementById("loading-screen");
+                loading.classList.add("hidden");
+            });
+            
+            /* =============================
+               ROTATE SYSTEM
+            ============================= */
+            let rotating = false;
+            let lastTime = 0;
+            let activeModelIndex = null; // model sedang dipakai
+            const rotateDegPerSec = 55;
+            
+            /* Semua model */
+            const models = {
+                0: document.getElementById("model0"),
+                1: document.getElementById("model1"),
+                2: document.getElementById("model2"),
+                3: document.getElementById("model3"),
+                4: document.getElementById("model4"),
+            };
+            
+            /* Simpan default transform */
+            const defaultTransforms = {};
+            
+            window.addEventListener("DOMContentLoaded", () => {
+                Object.keys(models).forEach(i => {
+                    const m = models[i];
+                    if (!m) return;
+            
+                    defaultTransforms[i] = {
+                        position: m.object3D.position.clone(),
+                        rotation: m.object3D.rotation.clone(),
+                        scale: m.object3D.scale.clone(),
+                    };
+                });
+            });
+            
+            /* Animasi Rotasi */
+            function rotateLoop(time) {
+                if (!rotating || activeModelIndex === null) return;
+            
+                const delta = (time - lastTime) / 1000;
+                lastTime = time;
+            
+                const deltaRad = (rotateDegPerSec * Math.PI / 180) * delta;
+            
+                const m = models[activeModelIndex];
+                if (m && m.object3D) {
+                    m.object3D.rotateOnAxis(new THREE.Vector3(0, 1, 0), deltaRad);
+                }
+            
+                requestAnimationFrame(rotateLoop);
+            }
+            
+            /* Tombol Rotate */
+            document.getElementById("btn-rotate").addEventListener("click", () => {
+                if (activeModelIndex === null) return;
+            
+                rotating = !rotating;
+                lastTime = performance.now();
+            
+                if (rotating) requestAnimationFrame(rotateLoop);
+            });
+            
+            /* =============================
+               MARKER EVENTS
+            ============================= */
+            document.querySelectorAll("[mindar-image-target]").forEach((marker) => {
+            marker.addEventListener("targetFound", () => {
+                const index = marker.components["mindar-image-target"].data.targetIndex;
+
+                activeModelIndex = index;
+                activeAudioIndex = index;  // tandai audio yg aktif
+
+                rotating = false;
+
+                // reset transform model
+                const m = models[index];
+                const d = defaultTransforms[index];
+                if (m && d) {
+                    m.object3D.position.copy(d.position);
+                    m.object3D.rotation.copy(d.rotation);
+                    m.object3D.scale.copy(d.scale);
+                }
+
+                // JANGAN AUTOPLAY AUDIO ❌
+                // Audio hanya boleh play saat user klik tombol Play
+                stopAllObjectAudio();
+            });
+
+            marker.addEventListener("targetLost", () => {
+                const index = marker.components["mindar-image-target"].data.targetIndex;
+
+                rotating = false;
+                activeModelIndex = null;
+                activeAudioIndex = null;
+
+                // reset transform
+                const m = models[index];
+                const d = defaultTransforms[index];
+                if (m && d) {
+                    m.object3D.position.copy(d.position);
+                    m.object3D.rotation.copy(d.rotation);
+                    m.object3D.scale.copy(d.scale);
+                }
+
+                // stop audio ketika marker hilang
+                stopAllObjectAudio();
+            });
+        });
+
+
+            const audios = {
+                0: document.getElementById("audio0"),
+                1: document.getElementById("audio1"),
+                2: document.getElementById("audio2"),
+                3: document.getElementById("audio3"),
+                4: document.getElementById("audio4"),
+            };
+            Object.values(audios).forEach(a => {
+                a.volume = 0.20;
+            });
+
+            // matikan semua audio
+            function stopAllObjectAudio() {
+                Object.values(audios).forEach(a => {
+                    a.pause();
+                    a.currentTime = 0;
+                });
+            }
+            // POPUP ALWAYS SHOW — dan AR diblok sampai popup ditutup
+            const popup = document.getElementById("popup-guide");
+            const btnClose = document.getElementById("btn-close-popup");
+            const sceneElement = document.querySelector("a-scene");
+            const arView = document.getElementById("ar-view");
+
+            // tombol berfungsi
+            btnClose.addEventListener("click", () => {
+                popup.style.display = "none";
+
+                // aktifkan input ke AR
+                sceneElement.style.pointerEvents = "auto";
+                arView.style.pointerEvents = "auto";
+            });
+            // POPUP INFO SYSTEM
+            const infoBtn = document.getElementById("info-button");
+            const popupInfo = document.getElementById("popup-info");
+            const btnCloseInfo = document.getElementById("btn-close-info");
+
+            // buka popup
+            infoBtn.addEventListener("click", () => {
+                popupInfo.style.display = "flex";
+
+                // block AR interaction
+                document.querySelector("a-scene").style.pointerEvents = "none";
+                document.getElementById("ar-view").style.pointerEvents = "none";
+            });
+
+            // tutup popup
+            btnCloseInfo.addEventListener("click", () => {
+                popupInfo.style.display = "none";
+
+                // re-enable AR interaction
+                document.querySelector("a-scene").style.pointerEvents = "auto";
+                document.getElementById("ar-view").style.pointerEvents = "auto";
+
+                if (bgm.paused) bgm.play().catch(()=>{});
+
+            });
+
+            // OPEN popup links
+            document.getElementById("profile-button").addEventListener("click", () => {
+                document.getElementById("popup-links").style.display = "flex";
+            });
+
+            // CLOSE popup links
+            document.getElementById("btn-close-links").addEventListener("click", () => {
+                document.getElementById("popup-links").style.display = "none";
+            });
+
+            // INTRO SYSTEM
+            const introContainer = document.getElementById("intro-container");
+            const introVideo = document.getElementById("intro-video");
+
+            // Selama intro tampil, AR dimatikan
+            document.querySelector("a-scene").style.pointerEvents = "none";
+            document.getElementById("ar-view").style.pointerEvents = "none";
+
+            // Ketika intro selesai
+            introVideo.onended = () => {
+                introContainer.style.display = "none";
+                document.querySelector("a-scene").style.pointerEvents = "auto";
+                document.getElementById("ar-view").style.pointerEvents = "auto";
+                if (bgm.paused) bgm.play().catch(()=>{});
+
+            };
+
+            // Klik untuk skip intro
+            introContainer.addEventListener("click", () => {
+                introContainer.style.display = "none";
+                introVideo.pause();
+                document.querySelector("a-scene").style.pointerEvents = "auto";
+                document.getElementById("ar-view").style.pointerEvents = "auto";
+                if (bgm.paused) bgm.play().catch(()=>{});
+
+            });
+
+            const bgm = document.getElementById("bgm");
+            bgm.volume = 0.025;
+
+            const btnBgm = document.getElementById("btn-bgm");
+            const bgmIcon = document.getElementById("bgm-icon");
+            const bgmText = document.getElementById("bgm-text");
+
+            let bgmMuted = false;
+
+            // auto play setelah user klik pertama
+            window.addEventListener("click", () => {
+                if (bgm.paused) bgm.play().catch(()=>{});
+            }, { once: true });
+
+            // tombol mute / unmute
+            btnBgm.addEventListener("click", () => {
+                bgmMuted = !bgmMuted;
+
+                if (bgmMuted) {
+                    bgm.pause();
+                    bgmIcon.src = "logounmutebgm.png";
+                    bgmText.innerText = "Unmute BGM";
+                } else {
+                    bgm.play().catch(()=>{});
+                    bgmIcon.src = "logomutebgm.png";
+                    bgmText.innerText = "Mute BGM";
+                }
+            });
+
+            let activeAudioIndex = null;
+            // tombol PLAY
+            document.getElementById("btn-play").addEventListener("click", () => {
+                if (activeAudioIndex === null) return;
+
+                const audio = audios[activeAudioIndex];
+                audio.play().catch(()=>{});
+            });
+
+            // tombol PAUSE
+            document.getElementById("btn-pause").addEventListener("click", () => {
+                if (activeAudioIndex === null) return;
+
+                const audio = audios[activeAudioIndex];
+                audio.pause();
+            });            
+
+        </script>            
+    </body>
+</html>
